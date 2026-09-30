@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RECON · Cálculos de Accidentes de Tráfico</title>
+<meta name="description" content="App pericial para cálculos de reconstrucción de accidentes: frenado, atropello, curva crítica, caída, detención y colisiones." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">🚓</div>
+    <div>
+      <h1>RECON · Accidentes de Tráfico</h1>
+      <p>Calculadora pericial · frenado · atropello · curva · caída · detención · colisión</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btnInforme" class="btn ghost" title="Generar informe con los resultados">📋 Informe</button>
+    <button id="btnHistorial" class="btn ghost" title="Ver historial guardado">🕘 Historial</button>
+    <button id="btnLimpiar" class="btn ghost" title="Borrar historial">🗑️</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Módulos de cálculo">
+  <button class="tab active" data-tab="frenado" role="tab">🛞 Frenado</button>
+  <button class="tab" data-tab="atropello" role="tab">🚶 Atropello</button>
+  <button class="tab" data-tab="curva" role="tab">↩️ Curva crítica</button>
+  <button class="tab" data-tab="caida" role="tab">🪂 Caída / Proyección</button>
+  <button class="tab" data-tab="detencion" role="tab">🛑 Detención</button>
+  <button class="tab" data-tab="colision" role="tab">💥 Colisión</button>
+  <button class="tab" data-tab="ayuda" role="tab">📖 Ayuda / μ</button>
+</nav>
+
+<main class="layout">
+  <!-- FRENADO -->
+  <section id="panel-frenado" class="panel active">
+    <div class="card">
+      <h2>Huella de frenado → velocidad</h2>
+      <p class="formula">v = 3,6 · √( 2 · g · d · (μ·k ± i) ) &nbsp;·&nbsp; g = 9,81 m/s²</p>
+      <div class="grid">
+        <label>Longitud de huella d (m)
+          <input id="f-d" type="number" min="0" step="0.1" value="25" />
+        </label>
+        <label>Adherencia μ
+          <input id="f-mu" type="number" min="0.05" max="1.2" step="0.01" value="0.70" list="listaMu" />
+        </label>
+        <label>Eficacia de frenada k (0–1)
+          <input id="f-k" type="number" min="0.1" max="1" step="0.05" value="1" />
+        </label>
+        <label>Pendiente i % (+ subida / − bajada)
+          <input id="f-i" type="number" step="0.5" value="0" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="frenado">Calcular velocidad</button>
+        <button class="btn" data-swap="frenado">Invertir: velocidad → distancia</button>
+      </div>
+      <div class="swapbox hidden" id="swap-frenado">
+        <label>Velocidad conocida (km/h)
+          <input id="f-vinv" type="number" min="0" step="1" value="80" />
+        </label>
+        <button class="btn primary" data-calc="frenadoInv">Calcular distancia</button>
+      </div>
+      <div class="result" id="res-frenado" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+    </div>
+  </section>
+
+  <!-- ATROPELLO -->
+  <section id="panel-atropello" class="panel">
+    <div class="card">
+      <h2>Atropello → velocidad por distancia de proyección</h2>
+      <p class="formula">Searle: v = 3,6 · √( 2·μ·g·d / (1+μ²) ) &nbsp;·&nbsp; Simple: v = 3,6 · √(2·μ·g·d)</p>
+      <div class="grid">
+        <label>Distancia de proyección d (m)
+          <input id="a-d" type="number" min="0" step="0.5" value="15" />
+        </label>
+        <label>μ calzada-peatón / cuerpo
+          <input id="a-mu" type="number" min="0.1" max="1.2" step="0.01" value="0.60" list="listaMu" />
+        </label>
+        <label>Método
+          <select id="a-met">
+            <option value="searle" selected>Searle (mínima, recomendado)</option>
+            <option value="simple">Simple (máxima orientativa)</option>
+          </select>
+        </label>
+        <label>Altura del frontal (m, informativo)
+          <input id="a-h" type="number" min="0" step="0.05" value="0.70" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="atropello">Calcular velocidad</button>
+      </div>
+      <div class="result" id="res-atropello" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+      <p class="note">Criterio pericial: la distancia se mide desde el punto de impacto hasta la posición final del peatón (o centro de reposo). Searle da la velocidad <em>mínima</em> compatible; el valor real suele ser algo mayor. Verifica siempre con huellas de frenada y daños.</p>
+    </div>
+  </section>
+
+  <!-- CURVA -->
+  <section id="panel-curva" class="panel">
+    <div class="card">
+      <h2>Velocidad crítica en curva (derrape / vuelco)</h2>
+      <p class="formula">Sin peralte: Vc = 3,6·√(μ·g·R) &nbsp;·&nbsp; Con peralte e: Vc = 3,6·√( g·R·(μ+e) / (1−μ·e) )</p>
+      <div class="grid">
+        <label>Radio de curva R (m)
+          <input id="c-r" type="number" min="1" step="1" value="60" />
+        </label>
+        <label>Adherencia lateral μ
+          <input id="c-mu" type="number" min="0.05" max="1.2" step="0.01" value="0.60" list="listaMu" />
+        </label>
+        <label>Peralte e % (0 si no hay)
+          <input id="c-e" type="number" step="0.5" value="0" />
+        </label>
+        <label>Altura c.d.g / vía (vuelco, opcional)
+          <input id="c-hv" type="number" min="0" step="0.01" value="0" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="curva">Calcular velocidad crítica</button>
+      </div>
+      <div class="result" id="res-curva" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+      <p class="note">Si superas Vc el vehículo derrapa. El vuelco se estima con el umbral estático SSF = vía/(2·h<sub>cdg</sub>); si SSF &lt; μ, vuelca antes de derrapar. Introduce vía y altura para comparar (ej. turismo: vía ≈ 1,5 m, h ≈ 0,55 m → SSF ≈ 1,36).</p>
+    </div>
+  </section>
+
+  <!-- CAIDA -->
+  <section id="panel-caida" class="panel">
+    <div class="card">
+      <h2>Caída libre y proyección horizontal</h2>
+      <p class="formula">t = √(2h/g) · v<sub>impacto</sub> = √(2gh) · alcance L = v₀·t → v₀ = L·√(g/2h)</p>
+      <div class="grid">
+        <label>Altura de caída h (m)
+          <input id="k-h" type="number" min="0" step="0.1" value="5" />
+        </label>
+        <label>Alcance horizontal L (m)
+          <input id="k-l" type="number" min="0" step="0.1" value="8" />
+        </label>
+        <label>Velocidad inicial v₀ (km/h, opcional)
+          <input id="k-v0" type="number" min="0" step="1" value="0" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="caida">Calcular</button>
+      </div>
+      <div class="result" id="res-caida" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+      <p class="note">Útil para salidas de vía en terraplén, caída de ocupantes o motocicletas proyectadas. Si dejas v₀ = 0 se calcula caída vertical pura; si das L se estima la velocidad horizontal de salida.</p>
+    </div>
+  </section>
+
+  <!-- DETENCION -->
+  <section id="panel-detencion" class="panel">
+    <div class="card">
+      <h2>Distancia de detención (reacción + frenada)</h2>
+      <p class="formula">D<sub>r</sub> = v·t<sub>r</sub> · D<sub>f</sub> = v² / (2·μ·g) · D<sub>t</sub> = D<sub>r</sub> + D<sub>f</sub></p>
+      <div class="grid">
+        <label>Velocidad (km/h)
+          <input id="d-v" type="number" min="0" step="1" value="90" />
+        </label>
+        <label>Tiempo de reacción t<sub>r</sub> (s)
+          <input id="d-tr" type="number" min="0.2" max="3" step="0.1" value="1.0" />
+        </label>
+        <label>Adherencia μ
+          <input id="d-mu" type="number" min="0.05" max="1.2" step="0.01" value="0.70" list="listaMu" />
+        </label>
+        <label>Pendiente i % (+/−)
+          <input id="d-i" type="number" step="0.5" value="0" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="detencion">Calcular distancia</button>
+        <button class="btn" data-swap="detencion">Invertir: distancia → velocidad máx.</button>
+      </div>
+      <div class="swapbox hidden" id="swap-detencion">
+        <label>Distancia disponible (m)
+          <input id="d-dinv" type="number" min="0" step="1" value="60" />
+        </label>
+        <button class="btn primary" data-calc="detencionInv">Calcular velocidad máx.</button>
+      </div>
+      <div class="result" id="res-detencion" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+    </div>
+  </section>
+
+  <!-- COLISION -->
+  <section id="panel-colision" class="panel">
+    <div class="card">
+      <h2>Colisión colineal → velocidad antes del impacto</h2>
+      <p class="formula">v<sub>común</sub> = √(2·μ·g·d<sub>post</sub>) · v₁ = (m₁+m₂)/m₁ · v<sub>común</sub> (alcance inelástico, 2.º parado)</p>
+      <div class="grid">
+        <label>Masa vehículo 1 (kg)
+          <input id="x-m1" type="number" min="100" step="50" value="1200" />
+        </label>
+        <label>Masa vehículo 2 (kg)
+          <input id="x-m2" type="number" min="0" step="50" value="1400" />
+        </label>
+        <label>Desplazamiento post-impacto d (m)
+          <input id="x-d" type="number" min="0" step="0.5" value="10" />
+        </label>
+        <label>μ tras impacto
+          <input id="x-mu" type="number" min="0.05" max="1.2" step="0.01" value="0.60" list="listaMu" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="colision">Calcular</button>
+      </div>
+      <div class="result" id="res-colision" aria-live="polite">Introduce los datos y pulsa calcular.</div>
+      <p class="note">Modelo simplificado de cantidad de movimiento para choque totalmente inelástico con el vehículo 2 parado y arrastre conjunto. Para otros casos usar informe ampliado y EES.</p>
+    </div>
+
+    <div class="card">
+      <h2>Energía cinética y equivalencia</h2>
+      <div class="grid">
+        <label>Masa (kg)
+          <input id="e-m" type="number" min="0" step="50" value="1200" />
+        </label>
+        <label>Velocidad (km/h)
+          <input id="e-v" type="number" min="0" step="1" value="80" />
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" data-calc="energia">Calcular energía</button>
+      </div>
+      <div class="result" id="res-energia" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- AYUDA -->
+  <section id="panel-ayuda" class="panel">
+    <div class="card">
+      <h2>Tabla orientativa de adherencia μ</h2>
+      <table class="table">
+        <thead><tr><th>Superficie</th><th>Seco</th><th>Mojado</th></tr></thead>
+        <tbody>
+          <tr><td>Asfalto nuevo / rugoso</td><td>0,75 – 0,90</td><td>0,45 – 0,60</td></tr>
+          <tr><td>Asfalto normal</td><td>0,65 – 0,80</td><td>0,40 – 0,55</td></tr>
+          <tr><td>Hormigón</td><td>0,70 – 0,85</td><td>0,45 – 0,60</td></tr>
+          <tr><td>Grava / tierra compacta</td><td>0,50 – 0,65</td><td>0,35 – 0,50</td></tr>
+          <tr><td>Adoquín</td><td>0,60 – 0,75</td><td>0,35 – 0,50</td></tr>
+          <tr><td>Hielo / nieve compacta</td><td colspan="2">0,10 – 0,30</td></tr>
+          <tr><td>Cuerpo humano sobre asfalto</td><td colspan="2">0,50 – 0,70</td></tr>
+        </tbody>
+      </table>
+      <h2>Tiempos de reacción habituales</h2>
+      <table class="table">
+        <thead><tr><th>Situación</th><th>t<sub>r</sub> (s)</th></tr></thead>
+        <tbody>
+          <tr><td>Alerta, esperado</td><td>0,6 – 0,8</td></tr>
+          <tr><td>Normal diurno</td><td>0,8 – 1,2</td></tr>
+          <tr><td>Sorpresa / noche / fatiga</td><td>1,5 – 2,0</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Valores orientativos para reconstrucción. El informe debe indicar μ adoptado y su justificación (medición con equipo, tablas, ensayo). Esta app es una ayuda de cálculo, no sustituye el dictamen pericial.</p>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>📋 Último resultado / Informe</h2>
+      <div id="informe" class="informe">Aún no hay cálculos. Cada cálculo se guarda automáticamente en el historial.</div>
+      <div class="row">
+        <button class="btn" id="btnCopiar">Copiar</button>
+        <button class="btn" id="btnImprimir">Imprimir / PDF</button>
+      </div>
+    </div>
+    <div class="card hidden" id="cardHistorial">
+      <h2>🕘 Historial</h2>
+      <ul id="listaHistorial" class="hist"></ul>
+    </div>
+  </aside>
+</main>
+
+<datalist id="listaMu">
+  <option value="0.80"></option><option value="0.70"></option><option value="0.60"></option>
+  <option value="0.50"></option><option value="0.40"></option><option value="0.20"></option>
+</datalist>
+
+<footer>
+  <span>RECON · uso pericial y docente · g = 9,81 m/s² · verifica siempre en campo</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
